@@ -1,0 +1,116 @@
+#include <LiquidCrystal.h>
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+int ldrPin = A0;
+int ledVerde = 8;
+int ledAmarelo = 9;
+int ledVermelho = 7;
+int buzzer = 6;
+
+int valorLDR = 0;
+int porcentagem = 0;
+
+// 🍷 níveis da garrafa
+byte g0[8] = {B00100,B00100,B01110,B10001,B10001,B10001,B10001,B01110};
+byte g1[8] = {B00100,B00100,B01110,B10001,B10001,B11111,B11111,B01110};
+byte g2[8] = {B00100,B00100,B01110,B10001,B11111,B11111,B11111,B01110};
+byte g3[8] = {B00100,B00100,B01110,B11111,B11111,B11111,B11111,B01110};
+
+void setup() {
+  pinMode(ledVerde, OUTPUT);
+  pinMode(ledAmarelo, OUTPUT);
+  pinMode(ledVermelho, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+
+  lcd.begin(16, 2);
+
+  lcd.createChar(0, g0);
+  lcd.createChar(1, g1);
+  lcd.createChar(2, g2);
+  lcd.createChar(3, g3);
+
+  // 👇 MENSAGEM INICIAL
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Vinheria Agnello");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Bem-vindo");
+
+  delay(3000);
+  lcd.clear();
+}
+
+void loop() {
+
+  // 🔧 FILTRO SIMPLES
+  int soma = 0;
+  for(int i=0; i<5; i++){
+    soma += analogRead(ldrPin);
+    delay(5);
+  }
+  valorLDR = soma / 5;
+
+  porcentagem = map(valorLDR, 0, 1023, 0, 100);
+
+  // RESET LEDs
+  digitalWrite(ledVerde, LOW);
+  digitalWrite(ledAmarelo, LOW);
+  digitalWrite(ledVermelho, LOW);
+
+  String status = "";
+
+  // 🟢 0–30
+  if (porcentagem <= 30) {
+    digitalWrite(ledAmarelo, HIGH);
+    digitalWrite(ledVerde, LOW);
+    digitalWrite(ledVermelho, HIGH);
+    status = "OK";
+  }
+
+  // 🟡 31–70
+  else if (porcentagem <= 70) {
+    digitalWrite(ledAmarelo, LOW);
+    digitalWrite(ledVerde, HIGH);
+    digitalWrite(ledVermelho, HIGH);
+    status = "ALERTA";
+  }
+
+  // 🔴 71–100
+  else {
+    digitalWrite(ledAmarelo, HIGH);
+    digitalWrite(ledVerde, HIGH);
+    digitalWrite(ledVermelho, LOW);
+    status = "PERIGO";
+  }
+
+  // 🔊 BUZZER
+  if (porcentagem > 30) {
+    digitalWrite(buzzer, HIGH);
+  } else {
+    digitalWrite(buzzer, LOW);
+  }
+
+  // 🍷 nível da garrafa
+  int nivel = 0;
+  if (porcentagem <= 25) nivel = 0;
+  else if (porcentagem <= 50) nivel = 1;
+  else if (porcentagem <= 75) nivel = 2;
+  else nivel = 3;
+
+  // LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Luz: ");
+  lcd.print(porcentagem);
+  lcd.print("%   ");
+
+  lcd.setCursor(0, 1);
+  lcd.print(status);
+  lcd.print("     ");
+
+  lcd.setCursor(14, 0);
+  lcd.write(byte(nivel));
+
+  delay(3000);
+}
